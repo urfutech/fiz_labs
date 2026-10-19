@@ -1,0 +1,2 @@
+sentence-transformers
+pandas==3.0.6
