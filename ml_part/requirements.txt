@@ -1,2 +1,6 @@
 sentence-transformers
 pandas==3.0.6
+scikit-learn
+numpy
+huggingface_hub
+llama-cpp-python

@@ -7,3 +7,7 @@ source venv/bin/activate.fish
 pip install -r requirements.txt
 python anti-plagiarism.py <json_name>
 ```
+
+```
+.\venv\Scripts\Activate.ps1
+```
