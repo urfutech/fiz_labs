@@ -5,9 +5,11 @@ requires-python = ">=3.13"
 dependencies = [
     "email-validator>=2.3.0",
     "fastapi[standard]>=0.162.0",
+    "httpx>=0.28.1",
     "pwdlib[argon2]>=0.3.1",
     "pyjwt>=2.15.1",
     "python-multipart>=0.0.32",
+    "sqlmodel>=0.0.48",
 ]
 [tool.fastapi]
-entrypoint = "main:app"
+entrypoint = "app.main:app"
