@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<<<<<<< HEAD
       <module fileurl="file://$PROJECT_DIR$/.idea/PostgresProject.iml" filepath="$PROJECT_DIR$/.idea/PostgresProject.iml" />
+=======
+      <module fileurl="file://$PROJECT_DIR$/.idea/SQLForProj.iml" filepath="$PROJECT_DIR$/.idea/SQLForProj.iml" />
+>>>>>>> 76e2c2b (Initial commit: add database dump)
     </modules>
   </component>
 </project>
