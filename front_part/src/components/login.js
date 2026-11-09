@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Dropdown from './dropdown';
 import './login.css'
+import svg from "../icons/sprite.svg";
 
 const LoginForm = ({ handleLogin, error }) => {
   const [formDetails, setFormDetails] = useState({
@@ -29,7 +30,14 @@ const LoginForm = ({ handleLogin, error }) => {
             <span className="text-danger">{error}</span>
           </div>
           <div className="logo">
-            <h2>УрФУ</h2>
+            <svg class="urfu-logo" width="209" height="101">
+              <use xlinkHref={`${svg}#urfu-logo`}></use>
+            </svg>
+            <div class="login-logo_wrapper">
+              <span class="sign-in-logo">Регистрация</span>
+              <span class="separator"></span>
+              <span class="login-logo">Вход</span>
+            </div>
           </div>
           <div className="mb-3 mt-3">
             <label htmlFor="fullname">ФИО</label>

@@ -1,12 +1,11 @@
 body {
+    display: grid;
     margin: 0;
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 24px;
     background-color: #174496;
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    justify-items: center;
+    align-items: center;
 }
 
 label {
@@ -15,13 +14,20 @@ label {
     display: inline-block;
 }
 
-.form-wrapper {
+.container {
     background: #fff;
     border-radius: 24px;
-    width: 100%;
+    width: 70%;
     max-width: 720px;
-    padding: 32px 40px;
+    padding: 13px 70px;
+    margin: 80px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.logo{
+    display: flex;
+    align-items: center;
+    flex-direction: column;
 }
 
 .signin-form {
@@ -42,4 +48,10 @@ input[type="password"] {
     font-size: 16px;
     outline: none; 
     transition: border-color 0.2s;
+}
+
+.separator:after{
+    height: 100%;
+    width: 2px;
+    background: #174496;
 }
