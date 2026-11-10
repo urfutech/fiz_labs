@@ -2,6 +2,8 @@ from typing import Annotated
 
 from fastapi import FastAPI, Depends, Query, HTTPException
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 
 class HeroBase(SQLModel):
@@ -28,6 +30,48 @@ class HeroUpdate(HeroBase):
     name: str | None = None
     age: int | None = None
     secret_name: str | None = None
+
+
+try:
+    conn = psycopg2.connect(
+        host="localhost",
+        databse="name",
+        user="postgres",
+        password="pass",
+        cursor_factory=RealDictCursor,
+    )
+    cursor = conn.cursor()
+    print("Database connection success")
+except Exception as error:
+    print("Connect to database failed")
+    print("Error: ", error)
+
+
+@app.post("/labs/{lab_id}")
+def enter_answer(row: int, answer: string):
+    cursor.execute(
+        """"INSERT INTO labs (row, answer) VALUES (%s, %s)
+        RETURNING *""",
+        (row, answer),
+    )
+    new_lab = cursor.fetchone()
+    conn.comit()
+
+
+@app.delete("/labs/{lab_id}")
+def delete_lab(lab_id: int):
+    cursor.execute("""DELETE FROM labs WHERE lab_id = %s RETURNING""", (lab_id))
+    deleted_lab = cursor.fetchone()
+    conn.comit()
+
+    if deleted_lab == None:
+        raise HTTPException(status_code=404)
+    return Response(status_code=200)
+
+
+@app.put("/labs/{lab_id}")
+def update_lab(lab_id: int, mess: str):
+    cursor.execute("""""")
 
 
 sqlite_file_name = "database.db"
