@@ -1,0 +1,43 @@
+{
+  "dataset": "lab1_seed",
+  "version": "0.1.0",
+  "created_at": "2026-11-10",
+  "lab_id": 1,
+  "record_count": 44,
+  "source_counts": {
+    "reference": 2,
+    "synthetic": 27,
+    "teacher_example": 15
+  },
+  "verdict_counts": {
+    "fail": 25,
+    "needs_review": 7,
+    "pass": 12
+  },
+  "criteria_counts": {
+    "k1": {
+      "False": 15,
+      "True": 28,
+      "None": 1
+    },
+    "k2": {
+      "True": 24,
+      "False": 20
+    },
+    "k3": {
+      "False": 19,
+      "None": 6,
+      "True": 19
+    }
+  },
+  "files": {
+    "jsonl": "data/processed/conclusions/lab1_seed.jsonl",
+    "guideline": "docs/annotation_guideline.md"
+  },
+  "notes": [
+    "Seed-версия; синтетические тексты требуют экспертной проверки.",
+    "Исходные тексты взяты из test.json и lab_num1.json.",
+    "ФИО заменены на student_id; исходные файлы пока содержат ПД.",
+    "Сплиты train/val/test будут добавлены отдельным шагом."
+  ]
+}

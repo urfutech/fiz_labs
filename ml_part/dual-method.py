@@ -20,21 +20,18 @@
     LLAMA_MODEL_FILENAME
 """
 
-import sys
-import os
 import json
+import os
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
-
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Чтобы русский текст нормально выводился в консоль
 try:
@@ -47,15 +44,9 @@ except Exception:
 # Настройки модели
 
 # Модель по умолчанию: Qwen2.5-3B-Instruct GGUF
-MODEL_REPO_ID = os.getenv(
-    "LLAMA_MODEL_REPO",
-    "Qwen/Qwen2.5-3B-Instruct-GGUF"
-)
+MODEL_REPO_ID = os.getenv("LLAMA_MODEL_REPO", "Qwen/Qwen2.5-3B-Instruct-GGUF")
 
-MODEL_FILENAME = os.getenv(
-    "LLAMA_MODEL_FILENAME",
-    "qwen2.5-3b-instruct-q4_k_m.gguf"
-)
+MODEL_FILENAME = os.getenv("LLAMA_MODEL_FILENAME", "qwen2.5-3b-instruct-q4_k_m.gguf")
 
 MODEL_LOCAL_DIR = os.getenv("LLAMA_MODEL_DIR", "models")
 
@@ -89,6 +80,7 @@ ALLOW_WEIGHT_AS_MASS = os.getenv("ALLOW_WEIGHT_AS_MASS", "0") == "1"
 
 
 # Чтение входного JSON
+
 
 def die(message: str) -> None:
     print(message, file=sys.stderr)
@@ -150,11 +142,8 @@ NEGATIONS = (
 
 # Вспомогательные функции
 
-def mentions_without_negation(
-    text: str,
-    keywords: list[str],
-    window: int = 40
-) -> bool:
+
+def mentions_without_negation(text: str, keywords: list[str], window: int = 40) -> bool:
     """
     Проверяет, встречаются ли ключевые слова без отрицания рядом.
     """
@@ -243,7 +232,7 @@ def extract_rel_errors(text: str) -> dict:
             pattern = rf"(?<![а-яё0-9]){re.escape(stem)}[а-яё]*"
 
             for m in re.finditer(pattern, text_low):
-                frag = text_low[m.start(): m.start() + 180]
+                frag = text_low[m.start() : m.start() + 180]
 
                 # Вариант 1: рядом есть проценты
                 pm = re.search(r"(\d+(?:[.,]\d+)?)\s*%", frag)
@@ -288,9 +277,9 @@ def dominant_error_source(rel_errors: dict):
         return None
 
     contributions = {
-        "масса": m ** 2,
+        "масса": m**2,
         "диаметр": (2 * d) ** 2,
-        "высота": h ** 2,
+        "высота": h**2,
     }
 
     return max(contributions, key=contributions.get)
@@ -371,12 +360,7 @@ def check_work(name: str, text: str, screen_score: float) -> dict:
 
     density_val = extract_density(text)
 
-    crit1 = (
-        has_mass
-        and has_diam
-        and has_height
-        and density_val is not None
-    )
+    crit1 = has_mass and has_diam and has_height and density_val is not None
 
     material = identify_material(density_val)
     crit2 = material is not None
@@ -409,6 +393,7 @@ def empty_row(name: str, score: float) -> dict:
 
 
 # Загрузка модели через Hugging Face
+
 
 def get_model_path() -> str:
     local_dir = Path(MODEL_LOCAL_DIR)
@@ -457,6 +442,7 @@ llm = load_llm()
 
 
 # Эмбеддинги через llama.cpp
+
 
 def truncate_text(text: str) -> str:
     """
@@ -596,14 +582,16 @@ for i in range(len(names)):
             if is_lexical:
                 reason.append("лексика")
 
-            plagiarism_cases.append({
-                "Студент 1": names[i],
-                "Студент 2": names[j],
-                "Семантика": f"{sem_score * 100:.1f}%",
-                "Лексика": f"{lex_score * 100:.1f}%",
-                "Причина": " + ".join(reason),
-                "_max": max(sem_score, lex_score),
-            })
+            plagiarism_cases.append(
+                {
+                    "Студент 1": names[i],
+                    "Студент 2": names[j],
+                    "Семантика": f"{sem_score * 100:.1f}%",
+                    "Лексика": f"{lex_score * 100:.1f}%",
+                    "Причина": " + ".join(reason),
+                    "_max": max(sem_score, lex_score),
+                }
+            )
 
 
 # ============================================================

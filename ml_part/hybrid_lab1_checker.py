@@ -32,18 +32,17 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 try:
     from huggingface_hub import hf_hub_download
-except Exception:
+except ImportError:
     hf_hub_download = None
 
 try:
     from llama_cpp import Llama
-except Exception:
+except ImportError:
     Llama = None
 
 
@@ -98,13 +97,14 @@ SYSTEM_PROMPT = """
 
 # Структуры
 
+
 @dataclass
 class RegexLab1Result:
     density: Optional[int] = None
     rel_mass: Optional[float] = None
     rel_diameter: Optional[float] = None
     rel_height: Optional[float] = None
-    named_materials: List[str] = field(default_factory=list)
+    named_materials: list[str] = field(default_factory=list)
     dominant_calculated: Optional[str] = None
     normalized_text: str = ""
 
@@ -125,6 +125,7 @@ class LLMLab1Result:
 
 
 # Утилиты
+
 
 def configure_stdio() -> None:
     try:
@@ -188,9 +189,17 @@ def parse_args() -> argparse.Namespace:
         help="Префикс для эмбеддингов, если модель его требует.",
     )
 
-    parser.add_argument("--no-plagiarism", action="store_true", help="Не считать антиплагиат.")
-    parser.add_argument("--no-llm", action="store_true", help="Не использовать LLM для смысловых признаков.")
-    parser.add_argument("--no-model", action="store_true", help="Не загружать модель вообще.")
+    parser.add_argument(
+        "--no-plagiarism", action="store_true", help="Не считать антиплагиат."
+    )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Не использовать LLM для смысловых признаков.",
+    )
+    parser.add_argument(
+        "--no-model", action="store_true", help="Не загружать модель вообще."
+    )
 
     parser.add_argument("--sem-threshold", type=float, default=0.75)
     parser.add_argument("--lex-threshold", type=float, default=0.45)
@@ -206,7 +215,9 @@ def parse_args() -> argparse.Namespace:
         ),
     )
 
-    parser.add_argument("--output", default="", help="Сохранить итоговую таблицу в CSV.")
+    parser.add_argument(
+        "--output", default="", help="Сохранить итоговую таблицу в CSV."
+    )
 
     return parser.parse_args()
 
@@ -241,6 +252,7 @@ def parse_number(value: str) -> float:
 
 
 # Regex / детерминированный слой
+
 
 def extract_density(text_norm: str) -> Optional[int]:
     """
@@ -288,7 +300,7 @@ def extract_rel_errors(text_norm: str) -> Dict[str, Optional[float]]:
             pattern = rf"(?<![а-яё0-9]){stem}[а-яё]*"
 
             for m in re.finditer(pattern, text_norm):
-                frag = text_norm[m.start(): m.start() + 200]
+                frag = text_norm[m.start() : m.start() + 200]
 
                 # Вариант 1: проценты
                 pm = re.search(r"(\d+(?:[.,]\d+)?)\s*%", frag)
@@ -342,9 +354,9 @@ def calculate_dominant_error(
         return None
 
     contributions = {
-        "масса": rel_mass ** 2,
+        "масса": rel_mass**2,
         "диаметр": (2.0 * rel_diameter) ** 2,
-        "высота": rel_height ** 2,
+        "высота": rel_height**2,
     }
 
     return max(contributions, key=contributions.get)
@@ -404,7 +416,9 @@ def extract_named_materials(text_norm: str) -> List[str]:
     return found
 
 
-def mentions_without_negation(text_norm: str, keywords: List[str], window: int = 50) -> bool:
+def mentions_without_negation(
+    text_norm: str, keywords: List[str], window: int = 50
+) -> bool:
     """
     Фолбэк-проверка наличия ключевых слов без отрицания.
     Используется только если LLM недоступна.
@@ -477,6 +491,7 @@ def build_regex_result(text: str) -> RegexLab1Result:
 
 # LLM-слой
 
+
 def build_user_prompt(text: str, allow_weight_as_mass: bool) -> str:
     if allow_weight_as_mass:
         weight_rule = (
@@ -484,9 +499,7 @@ def build_user_prompt(text: str, allow_weight_as_mass: bool) -> str:
             "только если контекст явно указывает на измерение массы или взвешивание."
         )
     else:
-        weight_rule = (
-            "Слово 'вес' не считается признаком массы, если явно не сказано, что это масса."
-        )
+        weight_rule = "Слово 'вес' не считается признаком массы, если явно не сказано, что это масса."
 
     return f"""
 Дан текст вывода студента по лабораторной работе №1.
@@ -543,7 +556,7 @@ def parse_json_loose(content: str) -> Dict[str, Any]:
     end = text.rfind("}")
 
     if start != -1 and end != -1 and end > start:
-        text = text[start:end + 1]
+        text = text[start : end + 1]
 
     return json.loads(text)
 
@@ -624,7 +637,9 @@ def validate_llm_data(data: Dict[str, Any]) -> LLMLab1Result:
         material_candidates=material_candidates,
         material_is_ambiguous=to_bool(data.get("material_is_ambiguous")),
         error_analysis_present=to_bool(data.get("error_analysis_present")),
-        dominant_error_source_named=normalize_dominant(data.get("dominant_error_source_named")),
+        dominant_error_source_named=normalize_dominant(
+            data.get("dominant_error_source_named")
+        ),
         valid=True,
         raw=data,
     )
@@ -689,6 +704,7 @@ def llm_extract_lab1(
 
 
 # Модель / эмбеддинги
+
 
 def download_model(args: argparse.Namespace) -> str:
     if hf_hub_download is None:
@@ -922,14 +938,16 @@ def compute_plagiarism(
                 if is_lexical:
                     reason.append("лексика")
 
-                cases.append({
-                    "Студент 1": names[i],
-                    "Студент 2": names[j],
-                    "Семантика": f"{sem_score * 100:.1f}%",
-                    "Лексика": f"{lex_score * 100:.1f}%",
-                    "Причина": " + ".join(reason),
-                    "_max": max(sem_score, lex_score),
-                })
+                cases.append(
+                    {
+                        "Студент 1": names[i],
+                        "Студент 2": names[j],
+                        "Семантика": f"{sem_score * 100:.1f}%",
+                        "Лексика": f"{lex_score * 100:.1f}%",
+                        "Причина": " + ".join(reason),
+                        "_max": max(sem_score, lex_score),
+                    }
+                )
 
     cases.sort(key=lambda x: x["_max"], reverse=True)
 
@@ -940,6 +958,7 @@ def compute_plagiarism(
 
 
 # Итоговая логика зачёта
+
 
 def empty_fail_row(
     name: str,
@@ -1000,7 +1019,9 @@ def merge_student_result(
         student_materials = regex_result.named_materials
         ambiguous = len(student_materials) != 1
 
-    student_material = student_materials[0] if len(student_materials) == 1 and not ambiguous else None
+    student_material = (
+        student_materials[0] if len(student_materials) == 1 and not ambiguous else None
+    )
 
     # 3. Критерий 1: измерения + плотность
     if llm_result.valid:
@@ -1114,6 +1135,7 @@ def merge_student_result(
 
 # main
 
+
 def main() -> None:
     configure_stdio()
     args = parse_args()
@@ -1129,7 +1151,9 @@ def main() -> None:
         sys.exit(1)
 
     if not isinstance(students_data, dict) or not students_data:
-        print("Ошибка: JSON должен быть непустым объектом {имя: текст}.", file=sys.stderr)
+        print(
+            "Ошибка: JSON должен быть непустым объектом {имя: текст}.", file=sys.stderr
+        )
         sys.exit(1)
 
     students_data = {
@@ -1141,13 +1165,8 @@ def main() -> None:
     texts = list(students_data.values())
 
     # Модель нужна, если включены LLM, скрининг или семантический плагиат
-    need_model = (
-        not args.no_model
-        and (
-            (not args.no_llm)
-            or args.use_screen
-            or (not args.no_plagiarism)
-        )
+    need_model = not args.no_model and (
+        (not args.no_llm) or args.use_screen or (not args.no_plagiarism)
     )
 
     llm: Optional[Llama] = None
@@ -1155,7 +1174,10 @@ def main() -> None:
     if need_model:
         llm = load_llm(args)
     else:
-        print("Модель не загружается: включён детерминированный/лексический режим.", file=sys.stderr)
+        print(
+            "Модель не загружается: включён детерминированный/лексический режим.",
+            file=sys.stderr,
+        )
 
     # Быстрый скрининг
     screen_scores = compute_screen_scores(llm, texts, args)
