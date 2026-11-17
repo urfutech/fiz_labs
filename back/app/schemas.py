@@ -1,21 +1,51 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
 
 
-class PostBase(BaseModel):
-    id: int
-    content: str
-    published: bool = True
+class Student(BaseModel):
+    name: str
 
 
-class Post(BaseModel):
-    id: int
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
+class Teacher(BaseModel):
+    name: str
 
 
-class UserCreate(BaseModel):
+class Lab(BaseModel):
+    title: str
+    description: str
+    is_published: bool
+
+
+class LabCreate(Lab):
+    created_by: int | None = None
+
+
+class LabUpdate(Lab):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    id: int
+    email: str
+    role: str
+
+
+class User(BaseModel):
+    username: str
+    email: str | None = None
+    full_name: str | None = None
+    disabled: bool | None = None
+
+
+class UserInDB(User):
+    hashed_password: str
