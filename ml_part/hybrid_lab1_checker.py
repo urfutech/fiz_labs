@@ -22,10 +22,12 @@ hybrid_lab1_checker.py
 """
 
 import argparse
+import contextlib
 import json
 import os
 import re
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -44,6 +46,11 @@ try:
     from llama_cpp import Llama
 except ImportError:
     Llama = None
+
+try:
+    from llama_cpp import LLAMA_POOLING_TYPE_MEAN
+except ImportError:
+    LLAMA_POOLING_TYPE_MEAN = None
 
 
 # Константы
@@ -665,12 +672,19 @@ def llm_extract_lab1(
 
     for attempt in range(args.llm_retries + 1):
         try:
-            response = llm.create_chat_completion(
-                messages=messages,
-                temperature=0.0,
-                top_p=0.1,
-                max_tokens=400,
-            )
+            # llama.cpp пишет спам-предупреждения о токенах при генерации
+            # на контексте с embedding=True — глушим их на время вызова.
+            with _capture_c_stderr() as cap:
+                try:
+                    response = llm.create_chat_completion(
+                        messages=messages,
+                        temperature=0.0,
+                        top_p=0.1,
+                        max_tokens=400,
+                    )
+                except Exception:
+                    _dump_c_stderr(cap)
+                    raise
 
             last_content = response["choices"][0]["message"]["content"] or ""
             data = parse_json_loose(last_content)
@@ -758,11 +772,22 @@ def load_llm(args: argparse.Namespace) -> Optional[Llama]:
         verbose=False,
     )
 
+    # Mean-пуллинг: create_embedding вернёт один вектор предложения,
+    # а не матрицу по токенам.
+    if LLAMA_POOLING_TYPE_MEAN is not None:
+        kwargs["pooling_type"] = LLAMA_POOLING_TYPE_MEAN
+
     if args.chat_format:
         kwargs["chat_format"] = args.chat_format
 
     try:
-        return Llama(**kwargs)
+        with _capture_c_stderr() as cap:
+            try:
+                return Llama(**kwargs)
+            except Exception:
+                # Показываем вывод llama.cpp — в нём причина сбоя.
+                _dump_c_stderr(cap)
+                raise
     except Exception as exc:
         print(f"Предупреждение: не удалось загрузить модель: {exc}", file=sys.stderr)
         return None
@@ -771,6 +796,31 @@ def load_llm(args: argparse.Namespace) -> Optional[Llama]:
 def truncate_for_embedding(text: str, n_ctx: int) -> str:
     max_chars = max(200, n_ctx * 2)
     return text[:max_chars]
+
+
+@contextlib.contextmanager
+def _capture_c_stderr():
+    """
+    Подавляет stderr-вывод C-библиотеки (llama.cpp пишет мимо Python-логов).
+
+    Возвращает буфер: при ошибке вызывающий код может напечатать содержимое.
+    """
+    with tempfile.TemporaryFile(mode="w+b") as tmp:
+        saved = os.dup(2)
+        os.dup2(tmp.fileno(), 2)
+        try:
+            yield tmp
+        finally:
+            os.dup2(saved, 2)
+            os.close(saved)
+
+
+def _dump_c_stderr(buf) -> None:
+    """Печатает накопленный C-stderr, если он есть (только при ошибке)."""
+    buf.seek(0)
+    details = buf.read().decode(errors="replace").strip()
+    if details:
+        print(details, file=sys.stderr)
 
 
 def embed_texts(
@@ -802,10 +852,16 @@ def embed_texts(
         t = truncate_for_embedding(t, n_ctx)
 
         try:
-            try:
-                response = llm.create_embedding(input=t, truncate=True)
-            except TypeError:
-                response = llm.create_embedding(input=t)
+            with _capture_c_stderr() as cap:
+                try:
+                    try:
+                        response = llm.create_embedding(input=t, truncate=True)
+                    except TypeError:
+                        response = llm.create_embedding(input=t)
+                except Exception:
+                    # Показываем вывод llama.cpp — в нём причина сбоя.
+                    _dump_c_stderr(cap)
+                    raise
 
             arr = np.asarray(response["data"][0]["embedding"], dtype=np.float32)
 
@@ -1136,23 +1192,80 @@ def merge_student_result(
 # main
 
 
+def _records_to_mapping(
+    records: list,
+) -> dict[str, str]:
+    """Преобразует список записей JSONL-датасета в {имя: текст}.
+
+    Ожидает поля ``text`` и идентификатор студента (``student_id``,
+    ``name`` или ``id``). Записи без текста пропускаются.
+    """
+    mapping: dict[str, str] = {}
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        text = item.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        key = None
+        for field in ("student_id", "name", "student", "id"):
+            value = item.get(field)
+            if isinstance(value, str) and value.strip():
+                key = value.strip()
+                break
+        if key is None:
+            key = f"student_{len(mapping) + 1}"
+        if key in mapping:
+            key = f"{key}_{len(mapping) + 1}"
+        mapping[key] = text
+    return mapping
+
+
 def main() -> None:
     configure_stdio()
     args = parse_args()
 
     try:
         with open(args.json_file, "r", encoding="utf-8") as f:
-            students_data = json.load(f)
+            raw = f.read()
     except FileNotFoundError:
         print(f"Ошибка: файл '{args.json_file}' не найден.", file=sys.stderr)
         sys.exit(1)
-    except json.JSONDecodeError as exc:
-        print(f"Ошибка: не удалось разобрать JSON: {exc}", file=sys.stderr)
-        sys.exit(1)
+
+    try:
+        students_data = json.loads(raw)
+    except json.JSONDecodeError:
+        # Возможно, это JSONL — по одному JSON-объекту на строку.
+        students_data = None
+
+    if isinstance(students_data, list):
+        students_data = _records_to_mapping(students_data)
+    elif not isinstance(students_data, dict):
+        records = []
+        try:
+            for line_no, line in enumerate(raw.splitlines(), 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    print(
+                        f"Ошибка: не удалось разобрать строку {line_no} (JSONL): {exc}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                records.append(item)
+        except json.JSONDecodeError as exc:
+            print(f"Ошибка: не удалось разобрать JSON: {exc}", file=sys.stderr)
+            sys.exit(1)
+        students_data = _records_to_mapping(records)
 
     if not isinstance(students_data, dict) or not students_data:
         print(
-            "Ошибка: JSON должен быть непустым объектом {имя: текст}.", file=sys.stderr
+            "Ошибка: JSON должен быть непустым объектом {имя: текст} "
+            "или JSONL с полями id/student_id и text.",
+            file=sys.stderr,
         )
         sys.exit(1)
 
