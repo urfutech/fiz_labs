@@ -6,26 +6,17 @@ from jwt.exceptions import InvalidTokenError
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pwdlib import PasswordHash
-from .schemas import User, UserInDB, Token, TokenData
 from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+from .database import get_db
+from . import schemas, models
 
 
 # to get a string like this run:
 # openssl rand -hex 32
 SECRET_KEY = "b1472ce5d54494eee8e1119235c89b9583bc5c466737adffddbec919f2022223"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$wagCPXjifgvUFBzq4hqe3w$CYaIb8sB+wtD+Vu/P4uod1+Qof8h+1g7bbDlBID48Rc",
-        "disabled": False,
-    }
-}
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 
 
 password_hash = PasswordHash.recommended()
@@ -46,23 +37,26 @@ def get_password_hash(password):
     return password_hash.hash(password)
 
 
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+def get_user(login: str, db: Session = Depends(get_db)):
+    user = db.query(models.Users).filter(models.Users.login == login).first()
+    if not user:
+        raise Exception("no winning")
+    return schemas.User.model_validate(user)
 
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(username: str, password: str, db: Session = Depends(get_db)):
+    user = get_user(username, db)
     if not user:
         verify_password(password, DUMMY_HASH)
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.password_hash):
         return False
     return user
 
 
-def create_access_token(data: TokenData, expires_delta: timedelta | None = None):
+def create_access_token(
+    data: schemas.TokenData, expires_delta: timedelta | None = None
+):
     to_encode = data.model_dump()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -73,31 +67,33 @@ def create_access_token(data: TokenData, expires_delta: timedelta | None = None)
     return encoded_jwt
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if not token:
-        return RedirectResponse(url="/login", status_code=202)
+    # if not token:
+    #     return RedirectResponse(url="/login", status_code=202)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("role")
+        username = payload.get("email")
         if username is None:
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=username)
+    user = get_user(username, db)
     if user is None:
         raise credentials_exception
     return user
 
 
 async def get_current_user_active(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
 ):
-    if current_user.disabled:
+    if current_user.status == "not active":
         raise HTTPException(status_code=400, detail="Not active user")
     return current_user
 
@@ -105,8 +101,8 @@ async def get_current_user_active(
 @router.post("/token/")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> Token:
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+) -> schemas.Token:
+    user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=400,
@@ -115,9 +111,7 @@ async def login_for_access_token(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        TokenData(
-            email=user.username,
-        ),
+        schemas.TokenData(email=user.login),
         expires_delta=access_token_expires,
     )
-    return Token(access_token=access_token, token_type="bearer")
+    return schemas.Token(access_token=access_token, token_type="bearer")

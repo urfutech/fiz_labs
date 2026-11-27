@@ -20,8 +20,32 @@ class Lab(Base):
     )
 
 
-class User(Base):
+class Users(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, nullable=False)
-    email = Column(String, nullable=False, unique=True)
-    password = Column(String, nullable=False)
+    role = Column(String(16), nullable=False)
+    login = Column(String(128), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    first_name = Column(String(64), nullable=False)
+    last_name = Column(String(64), nullable=False)
+    middle_name = Column(String(64), nullable=False)
+    group_id = Column(Integer)
+    selectable_for_students = Column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    status = Column(String(16), nullable=False)
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class Groups(Base):
+    __tablename__ = "groups"
+    id = Column(Integer, primary_key=True, nullable=False)
+    name = Column(String, nullable=False)
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )
