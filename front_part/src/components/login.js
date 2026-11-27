@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Dropdown from './dropdown';
 import './login.css'
+import svg from "../icons/sprite.svg";
 
 const LoginForm = ({ handleLogin, error }) => {
   const [formDetails, setFormDetails] = useState({
@@ -10,6 +11,52 @@ const LoginForm = ({ handleLogin, error }) => {
     email: '',
     password: '',
   });
+
+  
+  // const [user, setUser] = useState(null);
+  // const [error, setError] = useState('');
+
+  
+  // const Logout = () => {
+  //   setUser(null);
+  //   setError('');
+  // };
+
+  // const Login = async (details) => {
+  //   if (!details.fullname || !details.email || !details.password || !details.group || !details.teacher) {
+  //     setError('Заполните все поля');
+  //     return;
+  //   }
+  //   if (details.password !== details.confirmPassword) {
+  //     setError('Пароли не совпадают');
+  //     return;
+  //   }
+  //   const cleanFIO = details.fullname.trim().replace(/\s+/g, ' ');
+  //   const parts = cleanFIO.split(' ');
+  //   const lastName = parts[0]
+  //   const firstName = parts[1]
+  //   const middleName = parts[2]
+  //   const post = {
+  //     lastName,
+  //     firstName,
+  //     middleName,
+  //     group: details.group,
+  //     teacher: details.teacher,
+  //     email: details.email,
+  //     password: details.password
+  //   };
+  //   try {
+  //     const response = await axios.post(`${API_BASE}/items/`, {   //посмотрите пожалуйста куда я это вообще кидаю в какой файл поправьте там, apibase на строчке 7
+  //       post
+  //     });
+  //   } catch (error) {
+  //     console.error("Ошибка добавления:", error);
+  //   }
+  //   setUser(details);
+  //   setError('');
+  // };
+
+
 
   const handleChange = (e) => {
     setFormDetails({ ...formDetails, [e.target.name]: e.target.value });
@@ -29,7 +76,14 @@ const LoginForm = ({ handleLogin, error }) => {
             <span className="text-danger">{error}</span>
           </div>
           <div className="logo">
-            <h2>УрФУ</h2>
+            <svg class="urfu-logo" width="209" height="101">
+              <use xlinkHref={`${svg}#urfu-logo`}></use>
+            </svg>
+            <div class="login-logo_wrapper">
+              <span class="sign-in-logo">Регистрация</span>
+              <span class="separator"></span>
+              <span class="login-logo">Вход</span>
+            </div>
           </div>
           <div className="mb-3 mt-3">
             <label htmlFor="fullname">ФИО</label>

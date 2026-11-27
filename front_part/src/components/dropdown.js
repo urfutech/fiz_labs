@@ -18,8 +18,6 @@ function Dropdown({ title, name, value, options, onChange }) {
     return (
 
         <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
-            <button onClick={toggleDropdown}>
-            </button>
             <label htmlFor={name}>{title}</label>
             <input
                 className="form-control"
@@ -31,8 +29,11 @@ function Dropdown({ title, name, value, options, onChange }) {
                 value={value || ''}
                 placeholder="Выберите вариант"
                 onClick={toggleDropdown}
-                style={{ cursor: 'pointer'}}
+                style={{ cursor: 'pointer' }}
             />
+            <button class="icon-button" aria-label="Раскрыть" onClick={toggleDropdown}> 
+                
+            </button>
 
 
             {isOpen && (
