@@ -2,14 +2,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
 
 
-class Student(BaseModel):
-    name: str
-
-
-class Teacher(BaseModel):
-    name: str
-
-
 class Lab(BaseModel):
     title: str
     description: str
@@ -24,9 +16,33 @@ class LabUpdate(Lab):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserLogin(BaseModel):
-    email: EmailStr
+class CreateUser(BaseModel):
+    role: str
+    login: str
     password: str
+    first_name: str
+    last_name: str
+    middle_name: str
+
+
+class User(BaseModel):
+    role: str
+    login: str
+    first_name: str
+    last_name: str
+    middle_name: str
+    password_hash: str
+    status: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Group(BaseModel):
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TeacherLogin(User):
+    selectable_for_students: bool
 
 
 class Token(BaseModel):
@@ -35,17 +51,4 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    id: int
     email: str
-    role: str
-
-
-class User(BaseModel):
-    username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
-
-
-class UserInDB(User):
-    hashed_password: str
