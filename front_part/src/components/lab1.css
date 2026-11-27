@@ -1,0 +1,49 @@
+.field-row {
+  display: flex;
+  align-items: center; 
+  gap: 10px;           
+  margin-bottom: 12px;
+}
+
+.field-row label {
+  white-space: nowrap; 
+  margin-bottom: 0;   
+}
+
+.field-row .form-control {
+  flex: 1;           
+  width: auto;      
+  max-width: 300px;    
+}
+
+.field-row span {
+  white-space: nowrap;
+}
+
+
+.final-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px; 
+  margin: 15px 0 25px 0;
+  font-size: 1.1rem; 
+}
+
+
+.final-result-row .math-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+
+.inline-input {
+  width: 70px;
+  padding: 2px 5px;
+  text-align: center; 
+  font-size: 1rem;
+  border: 1px solid #333;
+  background-color: transparent;
+  outline: none;
+  transition: border-color 0.2s;
+}

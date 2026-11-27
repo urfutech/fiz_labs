@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import './home.css';
+import { useEffect } from 'react';
 
 const Home = ({ name, group, teacher }) => {
     const firstLetter = name ? name.trim().charAt(0).toUpperCase() : '';
+
+    useEffect(() => {
+        const prev = document.body.style.backgroundColor;
+        document.body.style.backgroundColor = '#fff';
+        return () => {
+            document.body.style.backgroundColor = prev;
+        };
+    }, []);
     return (
         <div>
             <div>
@@ -27,7 +36,7 @@ const Home = ({ name, group, teacher }) => {
 
         </div>
 
-        
+
     );
 };
 export default Home;
